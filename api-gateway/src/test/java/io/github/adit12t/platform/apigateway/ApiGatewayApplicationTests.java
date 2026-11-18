@@ -12,8 +12,13 @@ import static org.assertj.core.api.Assertions.assertThat;
         properties = {"eureka.client.enabled=false", "management.tracing.enabled=false"})
 class ApiGatewayApplicationTests {
 
-    @Autowired
     private WebTestClient client;
+
+    @Autowired
+    void bindClient(@org.springframework.beans.factory.annotation.Value("${local.server.port}") int port) {
+        client = WebTestClient.bindToServer().baseUrl("http://localhost:" + port)
+                .responseTimeout(java.time.Duration.ofSeconds(15)).build();
+    }
 
     @Autowired
     private RouteLocator routes;

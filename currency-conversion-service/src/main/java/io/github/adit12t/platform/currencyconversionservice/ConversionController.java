@@ -57,7 +57,7 @@ public class ConversionController {
         return ProblemDetail.forStatusAndDetail(e.status(), e.getMessage());
     }
 
-    @ExceptionHandler({HandlerMethodValidationException.class, IllegalArgumentException.class})
+    @ExceptionHandler({HandlerMethodValidationException.class, jakarta.validation.ConstraintViolationException.class, IllegalArgumentException.class})
     ProblemDetail invalid(Exception e) {
         String detail = e instanceof IllegalArgumentException ? e.getMessage()
                 : "Use three-letter currency codes and a positive amount with at most 2 decimals.";

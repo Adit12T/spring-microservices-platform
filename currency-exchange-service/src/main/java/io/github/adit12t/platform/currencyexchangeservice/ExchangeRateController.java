@@ -71,7 +71,7 @@ public class ExchangeRateController {
         return toResponse(repository.save(rate));
     }
 
-    @ExceptionHandler(HandlerMethodValidationException.class)
+    @ExceptionHandler({HandlerMethodValidationException.class, jakarta.validation.ConstraintViolationException.class})
     ProblemDetail invalid() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Currencies must be three-letter ISO 4217 codes.");
     }

@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: currency-conversion-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+server:
+  port: ${PORT:8100}
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+resilience4j:
+  circuitbreaker:
+    instances:
+      exchange-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        ignore-exceptions:
+          - io.github.adit12t.platform.currencyconversionservice.ExchangeRateClient$RateNotFoundException
+  timelimiter:
+    instances:
+      exchange-service:
+        timeout-duration: 2s
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,circuitbreakers
+  health:
+    circuitbreakers:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}

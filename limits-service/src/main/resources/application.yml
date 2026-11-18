@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: limits-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+server:
+  port: ${PORT:8080}
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+# Fallback values if the config server is unreachable.
+limits:
+  minimum: 1
+  maximum: 100
+  currency: USD
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}

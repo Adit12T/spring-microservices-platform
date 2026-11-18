@@ -1,0 +1,4 @@
+limits:
+  minimum: 5
+  maximum: 1000
+  currency: USD

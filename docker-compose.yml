@@ -1,0 +1,94 @@
+# Whole platform on one machine: docker compose up --build
+x-service: &service
+  restart: unless-stopped
+  environment: &env
+    EUREKA_URL: http://discovery-server:8761/eureka
+    CONFIG_SERVER_URL: http://config-server:8888
+    ZIPKIN_URL: http://zipkin:9411/api/v2/spans
+    DB_USER: platform
+    DB_PASSWORD: ${DB_PASSWORD:-local-only-password}
+  depends_on: &deps
+    discovery-server:
+      condition: service_healthy
+    config-server:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-local-only-password}
+    volumes:
+      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "platform"]
+      interval: 5s
+      retries: 10
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    ports:
+      - "9411:9411"
+
+  discovery-server:
+    build: { context: ., args: { MODULE: discovery-server } }
+    ports:
+      - "8761:8761"
+    healthcheck: &health
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/$${PORT:-8761} || exit 1"]
+      interval: 10s
+      retries: 12
+
+  config-server:
+    build: { context: ., args: { MODULE: config-server } }
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      <<: *health
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8888 || exit 1"]
+
+  currency-exchange-service:
+    <<: *service
+    build: { context: ., args: { MODULE: currency-exchange-service } }
+    deploy:
+      replicas: 2
+    environment:
+      <<: *env
+      DB_URL: jdbc:postgresql://postgres:5432/exchange
+    depends_on:
+      <<: *deps
+      postgres:
+        condition: service_healthy
+
+  currency-conversion-service:
+    <<: *service
+    build: { context: ., args: { MODULE: currency-conversion-service } }
+
+  limits-service:
+    <<: *service
+    build: { context: ., args: { MODULE: limits-service } }
+
+  user-service:
+    <<: *service
+    build: { context: ., args: { MODULE: user-service } }
+    environment:
+      <<: *env
+      DB_URL: jdbc:postgresql://postgres:5432/users
+    depends_on:
+      <<: *deps
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *service
+    build: { context: ., args: { MODULE: api-gateway } }
+    ports:
+      - "8765:8765"
+
+volumes:
+  pg-data:
